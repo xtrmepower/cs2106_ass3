@@ -122,7 +122,7 @@ void delFile(const char *filename) {
 	}
 
 	// Check to see if it is READ_ONLY
-	//TODO
+	//TODO: use bit mask to check if the file is READ-_ONLY
 
 	unsigned long *inodeBuffer = makeInodeBuffer();
 
