@@ -17,6 +17,8 @@ void initFS(const char *fsPartitionName, const char *fsPassword)
 
 	// If exists, attempt to mount partition.
 	mountFS(fsPartitionName, fsPassword);
+
+	_oft=NULL;
 }
 
 // Opens a file in the partition. Depending on mode, a new file may be created
@@ -55,10 +57,10 @@ int openFile(const char *filename, unsigned char mode)
 
 	//Creating OFT in the system.
 	_oftCount++;
-	TOpenFile newoft = new TOpenFile[_oftCount];
+	TOpenFile *newoft = new TOpenFile[_oftCount];
 
 	//Check if the directory already has items.
-	if(_oft!=null){
+	if(_oft!=NULL){
 		for(int i=0;i<_oftCount;i++){
 			newoft[i]=_oft[i];
 		}
@@ -70,9 +72,11 @@ int openFile(const char *filename, unsigned char mode)
 
 	// Get the attributes
 	TFileSystemStruct *fs = getFSInfo();
-	_oft[_oftCount-1] = new TOpenFile();
-	_oft[_oftCount-1]->blockSize = fs->blockSize;
-	_oft[_oftCount-1]->openMode = mode;
+	_oft[_oftCount-1].blockSize = fs->blockSize;
+	_oft[_oftCount-1].openMode = mode;
+	_oft[_oftCount-1].inodeBuffer = makeInodeBuffer();
+	_oft[_oftCount-1].buffer = makeDataBuffer();
+	_oft[_oftCount-1].filePtr = fileNdx;
 
 	return (_oftCount-1);
 }
@@ -92,77 +96,63 @@ void flushFile(int fp)
 // Read data from the file.
 void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
 {
+	if(fp>=0&&fp<_oftCount){
+		// Load the inode
+		loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
+
+		// Get the block number
+		unsigned long blockNum = _oft[fp].inodeBuffer[0];
+
+		// Read the block
+		readBlock(_oft[fp].buffer, blockNum);
+		readBlock((char*)buffer, blockNum);
+	}
 }
 
 // Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set.
 // See TDirectory structure.
 void delFile(const char *filename) {
-
-
-		// Search the directory for the file
-		unsigned int fileNdx = findFile(filename);
-
-		//Checking if it exists.
-		switch (mode) {
-			case MODE_NORMAL:
-				if(fileNdx == FS_FILE_NOT_FOUND)
-				{
-					printf("Cannot find encrypted file %s\n", filename);
-					exit(-1);
-				}
-				break;
-			case MODE_CREATE:
-				if(fileNdx == FS_FILE_NOT_FOUND)
-				{
-					printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename);
-				}
-				break;
-			case MODE_READ_ONLY:
-				if(fileNdx == FS_FILE_NOT_FOUND)
-				{
-					printf("Cannot find read-only encrypted file %s\n", filename);
-					exit(-1);
-				}
-				break;
-		}
-
-		//Creating OFT in the system.
-		_oftCount++;
-		TOpenFile newoft = new TOpenFile[_oftCount];
-
-		//Check if the directory already has items.
-		if(_oft!=null){
-			for(int i=0;i<_oftCount;i++){
-				newoft[i]=_oft[i];
-			}
-			delete[] _oft;
-		} else {
-			//Copy the new directory.
-			_oft=newoft;
-		}
-
-		// Get the attributes
-		TFileSystemStruct *fs = getFSInfo();
-		_oft[_oftCount-1] = new TOpenFile();
-		_oft[_oftCount-1]->blockSize = fs->blockSize;
-		_oft[_oftCount-1]->openMode = mode;
-
-		return (_oftCount-1);
-	// check if file exists
-
-	// check file's mode if it is not read-only
-
-	// if not read-only
-
-	// count--
-
-	// create array of size arraysize-1
-
-	// delete old array and assign new array to old pointer
 }
 
 // Close a file. Flushes all data buffers, updates inode, directory, etc.
-void closeFile(int fp);
+void closeFile(int fp){
+	flushFile(fp);
+
+	//Check if OFT has this file.
+	if(fp>=0 &&fp < _oftCount)
+	{
+			//Check if that file is not a read only
+			if(_oft[fp].openMode != MODE_READ_ONLY){
+				_oftCount--;
+				TOpenFile *newoft = new TOpenFile[_oftCount];
+
+				//Copy existing items infront of the index.
+					for(int i=0;i<fp;i++){
+						newoft[i]=_oft[i];
+					}
+				//Copy existing items behind of the index.
+					for(int i=fp;i<_oftCount;i++){
+						newoft[i]=_oft[i+1];
+					}
+
+					//Delete old OFT
+					free(_oft[fp].inodeBuffer);
+					free(_oft[fp].buffer);
+					delete[] _oft;
+					_oft = newoft;
+			}
+	}
+}
 
 // Unmount file system.
-void closeFS();
+void closeFS(){
+
+	for (int i = 0; i < _oftCount; i++) {
+		free(_oft[i].inodeBuffer);
+		free(_oft[i].buffer);
+	}
+	delete[] _oft;
+	_oft = NULL;
+
+	unmountFS();
+}

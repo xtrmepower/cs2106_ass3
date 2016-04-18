@@ -8,50 +8,24 @@ int main(int ac, char **av)
 		return -1;
 	}
 
-	// Mount the file system
 	initFS("part.dsk", av[2]);
 
-	// Get the attributes
-	TFileSystemStruct *fs = getFSInfo();
-
-	// Allocate the inode and buffer
-	unsigned long *inode = makeInodeBuffer();
 	char *buffer = makeDataBuffer();
-
-	// Search the directory for the file
-	unsigned int fileNdx = findFile(av[1]);
-
-	if(fileNdx == FS_FILE_NOT_FOUND)
-	{
-		printf("Cannot find encrypted file %s\n", av[1]);
-		exit(-1);
-	}
+	int fp=openFile(av[1],MODE_READ_ONLY);
+	readFile(fp, buffer,0,0);
 
 	// Get file length
 	unsigned int len = getFileLength(av[1]);
-
-	// Load the inode
-	loadInode(inode, fileNdx);
-
-	// Get the block number
-	unsigned long blockNum = inode[0];
-
-	// Read the block
-	readBlock(buffer, blockNum);
-
-	// Unmount the file system
-	closeFS();
-
 	// Open output file
-	FILE *fp = fopen(av[1], "w");
+	FILE *outFPtr = fopen(av[1], "w");
 
 	// Write the data
-	fwrite(buffer, sizeof(char), len, fp);
+	fwrite(buffer, sizeof(char), len, outFPtr);
 
 	// Close the file
-	fclose(fp);
-
-	free(inode);
+	fclose(outFPtr);
 	free(buffer);
+	
+	closeFS();
 	return 0;
 }
