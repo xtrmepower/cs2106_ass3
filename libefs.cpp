@@ -28,6 +28,8 @@ void initFS(const char *fsPartitionName, const char *fsPassword)
 
 int openFile(const char *filename, unsigned char mode)
 {
+	TFileSystemStruct *fs = getFSInfo();
+
 	// Search the directory for the file
 	unsigned int fileNdx = findFile(filename);
 
@@ -43,7 +45,22 @@ int openFile(const char *filename, unsigned char mode)
 		case MODE_CREATE:
 			if(fileNdx == FS_FILE_NOT_FOUND)
 			{
-				printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename);
+				printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename,filename);
+
+				// Allocate the buffer for reading
+				char *buffer = makeDataBuffer();
+
+				// Open the file to read its size.
+				FILE *inFPtr = fopen(filename, "r");
+
+				// Read the file
+				unsigned long len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
+
+				// Write the directory entry
+				fileNdx = makeDirectoryEntry(filename, 0x0, len);
+
+				free(buffer);
+				fclose(inFPtr);
 			}
 			break;
 		case MODE_READ_ONLY:
@@ -71,7 +88,6 @@ int openFile(const char *filename, unsigned char mode)
 	}
 
 	// Get the attributes
-	TFileSystemStruct *fs = getFSInfo();
 	_oft[_oftCount-1].blockSize = fs->blockSize;
 	_oft[_oftCount-1].openMode = mode;
 	_oft[_oftCount-1].inodeBuffer = makeInodeBuffer();
@@ -85,6 +101,32 @@ int openFile(const char *filename, unsigned char mode)
 // if file is opened in MODE_READ_ONLY mode.
 void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
 {
+	if(fp>=0&&fp<_oftCount){
+
+		// Find a free block
+		unsigned long freeBlock = findFreeBlock();
+
+		// Mark the free block now as busy
+		markBlockBusy(freeBlock);
+
+		// Load the inode
+		loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
+
+		// Set the first entry of the inode to the free block
+		_oft[fp].inodeBuffer[0]=freeBlock;
+
+		// Write the data to the block
+		writeBlock((char*)buffer, freeBlock);
+
+		// Write the inode
+		saveInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
+
+		// Write the free list
+		updateFreeList();
+
+		// Write the diretory
+		updateDirectory();
+	}
 }
 
 // Flush the file data to the disk. Writes all data buffers, updates directory,
