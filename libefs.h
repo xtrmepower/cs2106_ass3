@@ -29,7 +29,6 @@ void initFS(const char *fsPartitionName, const char *fsPassword);
 // if it doesn't exist, or we may get FS_FILE_NOT_FOUND in _result. See the enum above for valid modes.
 // Return -1 if file open fails for some reason. E.g. file not found when mode is MODE_NORMAL, or
 // disk is full when mode is MODE_CREATE, etc.
-
 int openFile(const char *filename, unsigned char mode);
 
 // Write data to the file. File must be opened in MODE_NORMAL or MODE_CREATE modes. Does nothing
@@ -49,7 +48,7 @@ void flushFile(int fp);
 // Note dataSize * dataCount can exceed the size of one block.
 void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount);
 
-// Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set. 
+// Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set.
 // See TDirectory structure.
 void delFile(const char *filename);
 
@@ -58,4 +57,3 @@ void closeFile(int fp);
 
 // Unmount file system.
 void closeFS();
-
