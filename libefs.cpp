@@ -112,6 +112,27 @@ void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCoun
 // Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set.
 // See TDirectory structure.
 void delFile(const char *filename) {
+
+	unsigned int toDelInodeIndex = delDirectoryEntry(filename);
+
+	// Check if file exists
+	if (toDelInodeIndex == FS_FILE_NOT_FOUND) {
+		printf("ERROR: File does not exist.");
+		return;
+	}
+
+	// Check to see if it is READ_ONLY
+	//TODO
+
+	unsigned long *inodeBuffer = makeInodeBuffer();
+
+	loadInode(inodeBuffer, toDelInodeIndex);
+
+	unsigned long blockNum = returnBlockNumFromInode(inodeBuffer, 0);
+
+	markBlockFree(blockNum);
+
+	updateFreeList();
 }
 
 // Close a file. Flushes all data buffers, updates inode, directory, etc.
