@@ -11,67 +11,158 @@ int _oftCount=0;
 
 // Mounts a paritition given in fsPartitionName. Must be called before all
 // other functions
-void initFS(const char *fsPartitionName, const char *fsPassword) {
+void initFS(const char *fsPartitionName, const char *fsPassword)
+{
+	// Check to see if partition given in fsPartitionName exists.
 
+	// If exists, attempt to mount partition.
 	mountFS(fsPartitionName, fsPassword);
-
-	_fs = getFSInfo();
 }
 
 // Opens a file in the partition. Depending on mode, a new file may be created
 // if it doesn't exist, or we may get FS_FILE_NOT_FOUND in _result. See the enum above for valid modes.
 // Return -1 if file open fails for some reason. E.g. file not found when mode is MODE_NORMAL, or
 // disk is full when mode is MODE_CREATE, etc.
-int openFile(const char *filename, unsigned char mode) {
 
-	FILE *fp;
+int openFile(const char *filename, unsigned char mode)
+{
+	// Search the directory for the file
+	unsigned int fileNdx = findFile(filename);
 
-
-	_oft->openMode = mode;
-
+	//Checking if it exists.
 	switch (mode) {
 		case MODE_NORMAL:
+			if(fileNdx == FS_FILE_NOT_FOUND)
+			{
+				printf("Cannot find encrypted file %s\n", filename);
+				exit(-1);
+			}
 			break;
-
 		case MODE_CREATE:
+			if(fileNdx == FS_FILE_NOT_FOUND)
+			{
+				printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename);
+			}
 			break;
-
 		case MODE_READ_ONLY:
+			if(fileNdx == FS_FILE_NOT_FOUND)
+			{
+				printf("Cannot find read-only encrypted file %s\n", filename);
+				exit(-1);
+			}
 			break;
 	}
 
-	return 0;
+	//Creating OFT in the system.
+	_oftCount++;
+	TOpenFile newoft = new TOpenFile[_oftCount];
+
+	//Check if the directory already has items.
+	if(_oft!=null){
+		for(int i=0;i<_oftCount;i++){
+			newoft[i]=_oft[i];
+		}
+		delete[] _oft;
+	} else {
+		//Copy the new directory.
+		_oft=newoft;
+	}
+
+	// Get the attributes
+	TFileSystemStruct *fs = getFSInfo();
+	_oft[_oftCount-1] = new TOpenFile();
+	_oft[_oftCount-1]->blockSize = fs->blockSize;
+	_oft[_oftCount-1]->openMode = mode;
+
+	return (_oftCount-1);
 }
 
 // Write data to the file. File must be opened in MODE_NORMAL or MODE_CREATE modes. Does nothing
 // if file is opened in MODE_READ_ONLY mode.
-void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount) {
+void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
+{
 }
 
 // Flush the file data to the disk. Writes all data buffers, updates directory,
 // free list and inode for this file.
-void flushFile(int fp) {
-	// writes to system
+void flushFile(int fp)
+{
 }
 
 // Read data from the file.
-void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount) {
+void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
+{
 }
 
 // Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set.
 // See TDirectory structure.
 void delFile(const char *filename) {
+
+
+		// Search the directory for the file
+		unsigned int fileNdx = findFile(filename);
+
+		//Checking if it exists.
+		switch (mode) {
+			case MODE_NORMAL:
+				if(fileNdx == FS_FILE_NOT_FOUND)
+				{
+					printf("Cannot find encrypted file %s\n", filename);
+					exit(-1);
+				}
+				break;
+			case MODE_CREATE:
+				if(fileNdx == FS_FILE_NOT_FOUND)
+				{
+					printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename);
+				}
+				break;
+			case MODE_READ_ONLY:
+				if(fileNdx == FS_FILE_NOT_FOUND)
+				{
+					printf("Cannot find read-only encrypted file %s\n", filename);
+					exit(-1);
+				}
+				break;
+		}
+
+		//Creating OFT in the system.
+		_oftCount++;
+		TOpenFile newoft = new TOpenFile[_oftCount];
+
+		//Check if the directory already has items.
+		if(_oft!=null){
+			for(int i=0;i<_oftCount;i++){
+				newoft[i]=_oft[i];
+			}
+			delete[] _oft;
+		} else {
+			//Copy the new directory.
+			_oft=newoft;
+		}
+
+		// Get the attributes
+		TFileSystemStruct *fs = getFSInfo();
+		_oft[_oftCount-1] = new TOpenFile();
+		_oft[_oftCount-1]->blockSize = fs->blockSize;
+		_oft[_oftCount-1]->openMode = mode;
+
+		return (_oftCount-1);
+	// check if file exists
+
+	// check file's mode if it is not read-only
+
+	// if not read-only
+
+	// count--
+
+	// create array of size arraysize-1
+
+	// delete old array and assign new array to old pointer
 }
 
 // Close a file. Flushes all data buffers, updates inode, directory, etc.
-void closeFile(int fp) {
-
-	updateFreeList();
-	updateDirectory();
-}
+void closeFile(int fp);
 
 // Unmount file system.
-void closeFS() {
-
-	unmountFS();
-}
+void closeFS();
