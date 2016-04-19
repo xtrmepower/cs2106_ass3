@@ -13,17 +13,18 @@ int main(int ac, char **av)
 	char *buffer = makeDataBuffer();
 
 	int fp=openFile(av[1],MODE_READ_ONLY);
-	if(fp!=-1)
+	if(fp!=-1) {
 		readFile(fp, buffer,0,0);
+		// Get file length
+		unsigned int len = getFileLength(av[1]);
+
+		// Write the buffer to a file.
+		FILE *outFPtr = fopen(av[1], "w");
+		fwrite(buffer, sizeof(char), len, outFPtr);
+		fclose(outFPtr);
+	}
 	else {
 			printf("Error: File not found.\n");
-			// Get file length
-			unsigned int len = getFileLength(av[1]);
-
-			// Write the buffer to a file.
-			FILE *outFPtr = fopen(av[1], "w");
-			fwrite(buffer, sizeof(char), len, outFPtr);
-			fclose(outFPtr);
 	}
 	free(buffer);
 
