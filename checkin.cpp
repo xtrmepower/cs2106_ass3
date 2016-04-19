@@ -14,11 +14,13 @@ int main(int ac, char **av) {
 	TFileSystemStruct *fs = getFSInfo();
 
 	//Open the current file to read.
-	fread(buffer, sizeof(char), fs->blockSize, inFPtr);
+	unsigned int len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
 
 	//Write into partition
 	int fp=openFile(av[1],MODE_CREATE);
-	writeFile(fp, buffer,0,0);
+	updateDirectoryFileLength(av[1],len);
+	writeFile(fp, buffer,sizeof(char),len);
+	printf("Buffer data: %s\n",buffer);
 
 	// Close the file
 	fclose(inFPtr);

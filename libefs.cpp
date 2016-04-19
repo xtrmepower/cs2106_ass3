@@ -47,20 +47,8 @@ int openFile(const char *filename, unsigned char mode)
 			{
 				printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename,filename);
 
-				// Allocate the buffer for reading
-				char *buffer = makeDataBuffer();
-
-				// Open the file to read its size.
-				FILE *inFPtr = fopen(filename, "r");
-
-				// Read the file
-				unsigned long len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
-
-				// Write the directory entry
-				fileNdx = makeDirectoryEntry(filename, 0x0, len);
-
-				free(buffer);
-				fclose(inFPtr);
+					// File isn't found, create a new directory and set its length to 0 to be updated later.
+					fileNdx = makeDirectoryEntry(filename, 0x0, 0);
 			}
 			break;
 		case MODE_READ_ONLY:
@@ -101,31 +89,36 @@ int openFile(const char *filename, unsigned char mode)
 // if file is opened in MODE_READ_ONLY mode.
 void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
 {
+	//Check if fp is valid.
 	if(fp>=0&&fp<_oftCount){
 
-		// Find a free block
-		unsigned long freeBlock = findFreeBlock();
+		//Check if file is not READ Only
+		if(_oft[fp].openMode!=MODE_READ_ONLY){
 
-		// Mark the free block now as busy
-		markBlockBusy(freeBlock);
+			// Find a free block
+			unsigned long freeBlock = findFreeBlock();
 
-		// Load the inode
-		loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
+			// Mark the free block now as busy
+			markBlockBusy(freeBlock);
 
-		// Set the first entry of the inode to the free block
-		_oft[fp].inodeBuffer[0]=freeBlock;
+			// Load the inode
+			loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
 
-		// Write the data to the block
-		writeBlock((char*)buffer, freeBlock);
+			// Set the first entry of the inode to the free block
+			_oft[fp].inodeBuffer[0]=freeBlock;
 
-		// Write the inode
-		saveInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
+			// Write the data to the block
+			writeBlock((char*)buffer, freeBlock);
 
-		// Write the free list
-		updateFreeList();
+			// Write the inode
+			saveInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
 
-		// Write the diretory
-		updateDirectory();
+			// Write the free list
+			updateFreeList();
+
+			// Write the diretory
+			updateDirectory();
+		}
 	}
 }
 
