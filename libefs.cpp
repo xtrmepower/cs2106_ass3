@@ -141,6 +141,8 @@ void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCou
 // free list and inode for this file.
 void flushFile(int fp)
 {
+	updateFreeList();
+	updateDirectory();
 }
 
 // Read data from the file.
@@ -179,6 +181,8 @@ void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCoun
 // Delete the file. Read-only flag (bit 2 of the attr field) in directory listing must not be set.
 // See TDirectory structure.
 void delFile(const char *filename) {
+
+	int totalFileSize = getFileLength(filename);
 	unsigned int toDelInodeIndex = delDirectoryEntry(filename);
 
 	// Check if file exists
@@ -193,15 +197,22 @@ void delFile(const char *filename) {
 	// Check to see if it is READ_ONLY
 	//TODO: use bit mask to check if the file is READ-_ONLY
 
+	TFileSystemStruct *fs = getFSInfo();
+	int requiredBlocks = totalFileSize / fs->blockSize;
+	if(totalFileSize % fs->blockSize!=0){
+		requiredBlocks+=1;
+	}
+
+	//Mark all blocks in the inode free.
 	unsigned long *inodeBuffer = makeInodeBuffer();
-
 	loadInode(inodeBuffer, toDelInodeIndex);
-
-	unsigned long blockNum = returnBlockNumFromInode(inodeBuffer, 0);
-
-	markBlockFree(blockNum);
+	for(int cycle=0;cycle<requiredBlocks;cycle++){
+		markBlockFree(inodeBuffer[cycle]);
+	}
+	saveInode(inodeBuffer, toDelInodeIndex);
 
 	updateFreeList();
+	updateDirectory();
 }
 
 // Close a file. Flushes all data buffers, updates inode, directory, etc.
