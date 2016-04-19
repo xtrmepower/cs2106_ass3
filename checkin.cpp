@@ -8,12 +8,20 @@ int main(int ac, char **av) {
 
 	initFS("part.dsk", av[2]);
 	TFileSystemStruct *fs = getFSInfo();
-	unsigned int len;
+	long len;
 
 	//Open the current file to read data and obtain length.
-	char *buffer = makeDataBuffer();
 	FILE *inFPtr = fopen(av[1], "r");
-	len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
+
+	//Obtain file size:
+  fseek (inFPtr , 0 , SEEK_END);
+  len = ftell (inFPtr);
+  rewind (inFPtr);
+
+	//Create a buffer to hold the whole file.
+	char *buffer = (char *) malloc(sizeof(char)*len);
+	fread(buffer, sizeof(char), len, inFPtr);
+
 	fclose(inFPtr);
 
 	//Write into partition
@@ -24,7 +32,6 @@ int main(int ac, char **av) {
 	} else {
 		updateDirectoryFileLength(av[1],len);
 		writeFile(fp, buffer,sizeof(char),len);
-		printf("Buffer data: %s\n",buffer);
 	}
 
 	// Close the file

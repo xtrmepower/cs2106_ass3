@@ -86,29 +86,53 @@ void writeFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCou
 		//Check if file is not READ Only
 		if(_oft[fp].openMode!=MODE_READ_ONLY){
 
-			// Find a free block
-			unsigned long freeBlock = findFreeBlock();
+				TFileSystemStruct *fs = getFSInfo();
+				printf("FS Size: %lu\n",fs->fsSize);
+				printf("Block Size: %i\n---\n",fs->blockSize);
+				printf("Length of file: %i\n",dataCount);
 
-			// Mark the free block now as busy
-			markBlockBusy(freeBlock);
+			int totalFileSize = dataCount * dataSize;
+			int requiredBlocks = totalFileSize / fs->blockSize;
+			if(totalFileSize % fs->blockSize!=0){
+				requiredBlocks+=1;
+			}
+
+			if(totalFileSize> fs->numInodeEntries*fs->blockSize){
+				//Todo: Handle if the size of the file to be written is larger than all the blocks in the inode combined.
+				return;
+			}
 
 			// Load the inode
 			loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
 
-			// Set the first entry of the inode to the free block
-			_oft[fp].inodeBuffer[0]=freeBlock;
+			//Create a temp block.
+			char tBlock[fs->blockSize];
 
-			// Write the data to the block
-			writeBlock((char*)buffer, freeBlock);
+			for(int cycle=0;cycle<requiredBlocks;cycle++){
+				// Find a free block
+				unsigned long freeBlock = findFreeBlock();
+
+				if(freeBlock==FS_FULL)
+					return;
+
+				// Mark the free block now as busy
+				markBlockBusy(freeBlock);
+
+				// Set the cycle entry of the inode to the free block
+				_oft[fp].inodeBuffer[cycle]=freeBlock;
+
+				//Extract the data from the buffer.
+				memcpy(tBlock, &(((char*)buffer)[fs->blockSize*cycle]),fs->blockSize);
+
+				// Write the data to the block
+				writeBlock((char*)tBlock, freeBlock);
+			}
+
+			printf("Total block(s) written: %i\n",requiredBlocks);
+			printf("Total byte(s) written: %i\n",dataCount);
 
 			// Write the inode
 			saveInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
-
-			// Write the free list
-			updateFreeList();
-
-			// Write the diretory
-			updateDirectory();
 		}
 	}
 }
@@ -123,15 +147,32 @@ void flushFile(int fp)
 void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCount)
 {
 	if(fp>=0&&fp<_oftCount){
+		TFileSystemStruct *fs = getFSInfo();
+
+		int totalFileSize = dataCount * dataSize;
+		int requiredBlocks = totalFileSize / fs->blockSize;
+		if(totalFileSize % fs->blockSize!=0){
+			requiredBlocks+=1;
+		}
+
 		// Load the inode
 		loadInode(_oft[fp].inodeBuffer, _oft[fp].filePtr);
 
-		// Get the block number
-		unsigned long blockNum = _oft[fp].inodeBuffer[0];
+		//Create a temp block.
+		char tBlock[fs->blockSize];
 
-		// Read the block
-		readBlock(_oft[fp].buffer, blockNum);
-		readBlock((char*)buffer, blockNum);
+		for(int cycle=0;cycle<requiredBlocks;cycle++){
+			// Get the block number
+			unsigned long blockNum = _oft[fp].inodeBuffer[cycle];
+
+			// Read the block
+			readBlock(tBlock, blockNum);
+
+			//Combine block memory.
+			memcpy(&(((char*)buffer)[fs->blockSize*cycle]), tBlock, fs->blockSize);
+		}
+		printf("Total block(s) loaded: %i\n",requiredBlocks);
+		printf("Total byte(s) loaded: %i\n",dataCount);
 	}
 }
 
