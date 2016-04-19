@@ -22,19 +22,14 @@ int main(int ac, char **av) {
 	//Check the file length in partition, if it's not 0, something already exist.
 	if(getFileLength(av[1])!=0){
 		printf("Error: Duplicated file.\n");
-		free(buffer);
-		closeFS();
-		return 0;
 	} else {
 		updateDirectoryFileLength(av[1],len);
+		writeFile(fp, buffer,sizeof(char),len);
+		printf("Buffer data: %s\n",buffer);
 	}
-	writeFile(fp, buffer,sizeof(char),len);
-	printf("Buffer data: %s\n",buffer);
 
 	// Close the file
 	free(buffer);
-
 	closeFS();
-
 	return 0;
 }
