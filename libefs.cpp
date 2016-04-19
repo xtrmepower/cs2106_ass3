@@ -34,30 +34,21 @@ int openFile(const char *filename, unsigned char mode)
 	unsigned int fileNdx = findFile(filename);
 
 	//Checking if it exists.
-	switch (mode) {
-		case MODE_NORMAL:
-			if(fileNdx == FS_FILE_NOT_FOUND)
-			{
-				printf("Cannot find encrypted file %s\n", filename);
-				exit(-1);
-			}
-			break;
-		case MODE_CREATE:
-			if(fileNdx == FS_FILE_NOT_FOUND)
-			{
-				printf("Cannot find encrypted file %s\nCreating a new file '%s'\n", filename,filename);
-
-					// File isn't found, create a new directory and set its length to 0 to be updated later.
-					fileNdx = makeDirectoryEntry(filename, 0x0, 0);
-			}
-			break;
-		case MODE_READ_ONLY:
-			if(fileNdx == FS_FILE_NOT_FOUND)
-			{
-				printf("Cannot find read-only encrypted file %s\n", filename);
-				exit(-1);
-			}
-			break;
+	if(fileNdx == FS_FILE_NOT_FOUND)
+	{
+		switch (mode) {
+			case MODE_NORMAL:
+			case MODE_READ_ONLY:
+					return -1;
+					break;
+			case MODE_CREATE:
+						// File isn't found, create a new directory and set its length to 0 to be updated later.
+						fileNdx = makeDirectoryEntry(filename, 0x0, 0);
+						if(fileNdx==FS_DIR_FULL){
+							return -1;
+						}
+				break;
+		}
 	}
 
 	//Creating OFT in the system.
