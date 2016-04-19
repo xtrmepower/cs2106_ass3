@@ -8,22 +8,30 @@ int main(int ac, char **av) {
 	}
 
 	initFS("part.dsk", av[2]);
+	TFileSystemStruct *fs = getFSInfo();
+	unsigned int len;
 
+	//Open the current file to read data and obtain length.
 	char *buffer = makeDataBuffer();
 	FILE *inFPtr = fopen(av[1], "r");
-	TFileSystemStruct *fs = getFSInfo();
-
-	//Open the current file to read.
-	unsigned int len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
+	len = fread(buffer, sizeof(char), fs->blockSize, inFPtr);
+	fclose(inFPtr);
 
 	//Write into partition
 	int fp=openFile(av[1],MODE_CREATE);
-	updateDirectoryFileLength(av[1],len);
+	//Check the file length in partition, if it's not 0, something already exist.
+	if(getFileLength(av[1])!=0){
+		printf("Error: Duplicated file.\n");
+		free(buffer);
+		closeFS();
+		return 0;
+	} else {
+		updateDirectoryFileLength(av[1],len);
+	}
 	writeFile(fp, buffer,sizeof(char),len);
 	printf("Buffer data: %s\n",buffer);
 
 	// Close the file
-	fclose(inFPtr);
 	free(buffer);
 
 	closeFS();
