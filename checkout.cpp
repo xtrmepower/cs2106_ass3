@@ -14,7 +14,7 @@ int main(int ac, char **av)
 	if(fp!=-1) {
 		//Get length of file.
 		unsigned int len = getFileLength(av[1]);
-		char *buffer = (char *) malloc(sizeof(char)*len);
+		char *buffer = (char *) calloc(sizeof(char), len);
 
 		readFile(fp, buffer,sizeof(char),len);
 

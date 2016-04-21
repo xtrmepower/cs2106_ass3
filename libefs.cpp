@@ -182,20 +182,19 @@ void readFile(int fp, void *buffer, unsigned int dataSize, unsigned int dataCoun
 // See TDirectory structure.
 void delFile(const char *filename) {
 
-	int totalFileSize = getFileLength(filename);
-	unsigned int toDelInodeIndex = delDirectoryEntry(filename);
+	unsigned int toDelInodeIndex = findFile(filename);
 
-	// Check if file exists
 	if (toDelInodeIndex == FS_FILE_NOT_FOUND) {
-		printf("Error: File not found.\n");
+		printf("ERROR: File not found.\n");
 		return;
 	}
 
-	//Todo: Clear up oft entry.
+	unsigned int attr = getattr(filename);
+	bool isReadOnly = (attr & (1 << 2));
 
+	int totalFileSize = getFileLength(filename);
 
-	// Check to see if it is READ_ONLY
-	//TODO: use bit mask to check if the file is READ-_ONLY
+	delDirectoryEntry(filename);
 
 	TFileSystemStruct *fs = getFSInfo();
 	int requiredBlocks = totalFileSize / fs->blockSize;
