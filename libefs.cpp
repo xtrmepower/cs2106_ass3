@@ -192,6 +192,11 @@ void delFile(const char *filename) {
 	unsigned int attr = getattr(filename);
 	bool isReadOnly = (attr & (1 << 2));
 
+	if (isReadOnly) {
+		printf("%s is read-only.\n", filename);
+		return;
+	}
+
 	int totalFileSize = getFileLength(filename);
 
 	delDirectoryEntry(filename);

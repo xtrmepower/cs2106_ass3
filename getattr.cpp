@@ -9,8 +9,11 @@ int main(int ac, char **av)
 		return -1;
 	}
 
+	mountFS("part.dsk", "");
+
 	if (findFile(av[1]) == FS_FILE_NOT_FOUND) {
 		printf("ERROR: File not found!\n");
+		closeFS();
 		return -1;
 	}
 
@@ -22,6 +25,8 @@ int main(int ac, char **av)
 	} else {
 		printf("W\n");
 	}
+
+	closeFS();
 
 	return 0;
 }
